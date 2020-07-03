@@ -1593,6 +1593,73 @@ namespace internal
               data.volume_elements[point] =
                 data.contravariant[point].determinant();
 
+//UNCOMMENT THE #IF 0 AND #ENDIF for UNEDITTED VERSION OF MAPPING_Q_GENERIC
+//#if 0
+        const bool conservative_curl_metric = true;
+        if(conservative_curl_metric){ 
+        if(spacedim == 3){
+            std::vector<dealii::DerivativeForm<1,dim,spacedim>> Xl_grad_Xm(n_q_points);
+            for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+            for(int ndim=0; ndim<spacedim; ndim++){
+                int mdim, ldim;//ndim, mdim, ldim cyclic
+                if(ndim == dim-1){
+                    mdim = 0;
+                }
+                else{
+                    mdim = ndim + 1;
+                }
+                if(ndim == 0){
+                    ldim = dim - 1;
+                }
+                else{
+                    ldim = ndim - 1;
+                }
+                for(int i=0; i<dim; ++i){
+                    Xl_grad_Xm[iquad][ndim][i] = quadrature_points[iquad][ldim] * data.contravariant[iquad][mdim][i];
+                }
+            }
+            }
+            //Somehow have the gradint of Xl_grad_Xm evaluated at each quadrature point,
+            //I'm assuming this is done somehow through "evaluate", I will continue as if it is
+            //writtenin grad_xl_grad_Xm
+            std::vector<dealii::DerivativeForm<2,dim,spacedim>> grad_Xl_grad_Xm(n_q_points);
+            std::vector<dealii::DerivativeForm<1,dim,spacedim>> In_J_a_ni(n_q_points);
+            for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+            for(int ndim=0; ndim<dim; ndim++){
+                for(int idim=0; idim<dim; ++idim){
+                int jdim, kdim;//ndim, mdim, ldim cyclic
+                if(idim == dim-1){
+                    jdim = 0;
+                }
+                else{
+                    jdim = idim + 1;
+                }
+                if(idim == 0){
+                    kdim = dim - 1;
+                }
+                else{
+                    kdim = idim - 1;
+                }
+                    In_J_a_ni[iquad][ndim][idim]= - (grad_Xl_grad_Xm[iquad][ndim][kdim][jdim] - grad_Xl_grad_Xm[iquad][ndim][jdim][kdim]);
+                }
+            }
+            }
+            for (unsigned int point = 0; point < n_q_points; ++point){
+                for(int idim=0; idim<dim; idim++){
+                    for(int jdim=0; jdim<spacedim; jdim++){
+                        data.covariant[point][idim][jdim] = In_J_a_ni[point][idim][jdim] / data.contravariant[point].determinant();
+                    }
+                }
+            }
+            
+
+        }
+        }
+
+//#endif
+
+
+
         if (evaluate_hessians)
           {
             constexpr int desymmetrize_3d[6][2] = {
