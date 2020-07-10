@@ -231,7 +231,9 @@ int main (int argc, char * argv[])
     const int dim = 3;
     const int nstate = 1;
 
-    unsigned int poly_degree = 4;
+    double max_GCL = 0.0;
+    for(unsigned int poly_degree = 2; poly_degree<6; poly_degree++){
+
     double left = 0.0;
     double right = 1.0;
     const bool colorize = true;
@@ -282,7 +284,6 @@ int main (int argc, char * argv[])
 
             const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree+1);
     
-    double max_GCL = 0.0;
 
     const unsigned int n_quad_pts      = volume_quadrature_collection[0].size();
     const unsigned int n_dofs_cell     =fe_collection[0].dofs_per_cell;
@@ -369,20 +370,20 @@ int main (int argc, char * argv[])
                 }
 
                 for(int idim=0; idim<dim; idim++){
-                    printf("\n GCL for derivative x_%d \n", idim);
                     for(unsigned int idof=0; idof<n_dofs_cell; idof++){
-                        printf(" %.16g \n", GCL[idim][idof]);
                         if( std::abs(GCL[idim][idof]) > max_GCL){
                             max_GCL = std::abs(GCL[idim][idof]);
                         }
                     }
                 }
-                printf("max GCL %g\n", max_GCL);
 
             }
+                printf("max GCL %g for polynomial degree %d\n", max_GCL, poly_degree);
+
+    }//end poly loop
 
 
-    if( max_GCL > 1e-13){
+    if( max_GCL > 5e-13){
         printf(" Metrics Do NOT Satisfy GCL Condition\n");
         return 1;
     }
