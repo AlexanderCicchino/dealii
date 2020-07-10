@@ -49,6 +49,7 @@
 #include <memory>
 #include <numeric>
 
+#include <deal.II/fe/fe_system.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -1552,9 +1553,10 @@ namespace internal
                 for (unsigned int in_comp = 0;
                      in_comp < n_lanes &&
                      in_comp < spacedim - out_comp * n_lanes;
-                     ++in_comp)
+                     ++in_comp){
                   quadrature_points[i][out_comp * n_lanes + in_comp] =
                     data.values_quad[out_comp * n_q_points + i][in_comp];
+                }
           }
 
         if (evaluate_gradients)
@@ -1593,15 +1595,17 @@ namespace internal
               data.volume_elements[point] =
                 data.contravariant[point].determinant();
 
-//UNCOMMENT THE #IF 0 AND #ENDIF for UNEDITTED VERSION OF MAPPING_Q_GENERIC
-//#if 0
+
+        //ADDED for 3D curvilinear J^{-1} satisfying GCL 
+        //as per Kopriva's Conservative Curl Represented Form
+        //(For Free-Stream Preservation)
         const bool conservative_curl_metric = true;
-        if(conservative_curl_metric){ 
-        if(spacedim == 3){
+        if(conservative_curl_metric == true){ 
+        if(dim == 3){
             std::vector<dealii::DerivativeForm<1,dim,spacedim>> Xl_grad_Xm(n_q_points);
             for(unsigned int iquad=0; iquad<n_q_points; iquad++){
             for(int ndim=0; ndim<spacedim; ndim++){
-                int mdim, ldim;//ndim, mdim, ldim cyclic
+                int mdim, ldim;//ndim, mdim, ldim cyclic indices
                 if(ndim == dim-1){
                     mdim = 0;
                 }
@@ -1619,10 +1623,46 @@ namespace internal
                 }
             }
             }
-            //Somehow have the gradint of Xl_grad_Xm evaluated at each quadrature point,
-            //I'm assuming this is done somehow through "evaluate", I will continue as if it is
-            //writtenin grad_xl_grad_Xm
+
+            //Since the metric Jacobian is built at the volume cubature nodes (quadrature/flux points)
+            //it's basis wrt. the reference element is collocated, thus we construct an arbitrary
+            //collocated Lagrange basis on the reference element quadrature points, as to get the 
+            //gradient of the above quantity -> \nabla[ X_l * \nabla( X_m ) ] as to represent the curl
+            //by cyclically looping through the gradient
             std::vector<dealii::DerivativeForm<2,dim,spacedim>> grad_Xl_grad_Xm(n_q_points);
+            dealii::hp::FECollection<dim> fe_collection;
+            dealii::hp::QCollection<dim> volume_quadrature_collection;
+            dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.shape_info.data[0].quadrature);
+            const dealii::FESystem<dim,dim> fe_system(fe_dg, 1);
+            fe_collection.push_back (fe_system);
+            dealii::Quadrature<dim> vol_quad(data.shape_info.data[0].quadrature);
+            volume_quadrature_collection.push_back(vol_quad);
+            //note we assume n_quad_points == n_dofs_per_cell for differentiating the basis on the
+            //quadrtaure nodes.
+
+                for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    for(int idim=0; idim<dim; idim++){
+                        for(int jdim=0; jdim<dim; jdim++){
+                            for(int kdim=0; kdim<dim; kdim++){
+                                grad_Xl_grad_Xm[iquad][idim][jdim][kdim] =0.0;
+                                for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
+                                    const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
+                                    dealii::Tensor<1,dim,double> derivative;
+                                    derivative = fe_collection[0].shape_grad_component(idof, qpoint, 0);
+                                    grad_Xl_grad_Xm[iquad][idim][jdim][kdim] += 
+                                       derivative[kdim]
+                                        * Xl_grad_Xm[idof][idim][jdim];
+                                }
+                            }
+                        }
+                    }
+                }
+
+            // In_J_a_ni represents the interpolation representation of the determinant of
+            // the metric Jacobian times the covariant basis (covaraiant basis = a_n^i)
+            // index idim represents the reference element direction
+            // index ndim represent the physical element direction
+            // Example a_2^1 ->n=2, i=1 -> a_2^1 = d( \xi )/ d( y)
             std::vector<dealii::DerivativeForm<1,dim,spacedim>> In_J_a_ni(n_q_points);
             for(unsigned int iquad=0; iquad<n_q_points; iquad++){
             for(int ndim=0; ndim<dim; ndim++){
@@ -1640,10 +1680,11 @@ namespace internal
                 else{
                     kdim = idim - 1;
                 }
-                    In_J_a_ni[iquad][ndim][idim]= - (grad_Xl_grad_Xm[iquad][ndim][kdim][jdim] - grad_Xl_grad_Xm[iquad][ndim][jdim][kdim]);
+                    In_J_a_ni[iquad][ndim][idim]= - (grad_Xl_grad_Xm[iquad][ndim][kdim][jdim] - grad_Xl_grad_Xm[iquad][ndim][jdim][kdim]);//curl of above quantity
                 }
             }
             }
+            //write/store the covariant representation
             for (unsigned int point = 0; point < n_q_points; ++point){
                 for(int idim=0; idim<dim; idim++){
                     for(int jdim=0; jdim<spacedim; jdim++){
@@ -1651,14 +1692,9 @@ namespace internal
                     }
                 }
             }
-            
-
         }
         }
-
-//#endif
-
-
+        //end of conservative curl representation for inverse of metric Jacobian
 
         if (evaluate_hessians)
           {
