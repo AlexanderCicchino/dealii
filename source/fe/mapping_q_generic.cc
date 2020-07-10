@@ -1601,6 +1601,50 @@ namespace internal
         //(For Free-Stream Preservation)
         const bool conservative_curl_metric = true;
         if(conservative_curl_metric == true){ 
+        if(dim==2){
+            //Note: for 2D we do not use data.contravariant as above but instead
+            //differentiate the interpolation of the physical quadrature nodes
+            //This is outlined in Kopriva's paper that I^N(\nabla(X) ) != \nabla(I^N X)
+            //here we do the latter which satisfies GCL/free-stream preservation
+            std::vector<dealii::DerivativeForm<1,dim,spacedim>> grad_Xl(n_q_points);
+            dealii::hp::FECollection<dim> fe_collection;
+            dealii::hp::QCollection<dim> volume_quadrature_collection;
+            dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.shape_info.data[0].quadrature);
+            const dealii::FESystem<dim,dim> fe_system(fe_dg, 1);
+            fe_collection.push_back (fe_system);
+            dealii::Quadrature<dim> vol_quad(data.shape_info.data[0].quadrature);
+            volume_quadrature_collection.push_back(vol_quad);
+                for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    for(int idim=0; idim<dim; idim++){
+                            for(int kdim=0; kdim<dim; kdim++){
+                                grad_Xl[iquad][idim][kdim] =0.0;
+                                for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
+                                    const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
+                                    dealii::Tensor<1,dim,double> derivative;
+                                    derivative = fe_collection[0].shape_grad_component(idof, qpoint, 0);
+                                    grad_Xl[iquad][idim][kdim] += 
+                                       derivative[kdim]
+                                        * quadrature_points[idof][idim];
+                                }
+                            }
+                    }
+                }
+
+            //for 2D Cross-Product Form = Cons Curl form
+            for (unsigned int point = 0; point < n_q_points; ++point){
+                for(int idim=0; idim<dim; idim++){
+                    for(int jdim=0; jdim<spacedim; jdim++){
+                        if(idim == jdim){
+                            int mdim = (idim == 0) ? 1 : 0;
+                            data.covariant[point][idim][jdim] =  grad_Xl[point][mdim][mdim] / data.contravariant[point].determinant();
+                        }
+                        else{//negative transpose
+                            data.covariant[point][idim][jdim] = - grad_Xl[point][jdim][idim] / data.contravariant[point].determinant();
+                        }
+                    }
+                }
+            }
+        }
         if(dim == 3){
             std::vector<dealii::DerivativeForm<1,dim,spacedim>> Xl_grad_Xm(n_q_points);
             for(unsigned int iquad=0; iquad<n_q_points; iquad++){
