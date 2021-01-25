@@ -50,6 +50,8 @@
 #include <numeric>
 
 #include <deal.II/fe/fe_system.h>
+#include <deal.II/base/qprojector.h>
+#include <deal.II/base/geometry_info.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -1609,26 +1611,44 @@ namespace internal
             std::vector<dealii::DerivativeForm<1,dim,spacedim>> grad_Xl(n_q_points);
             dealii::hp::FECollection<dim> fe_collection;
             dealii::hp::QCollection<dim> volume_quadrature_collection;
-            dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.shape_info.data[0].quadrature);
+           // dealii::QGaussLobatto<1> vol_quad_Gauss_Lobatto (data.polynomial_degree+1);
+           // dealii::FE_DGQArbitraryNodes<dim> fe_dg(vol_quad_Gauss_Lobatto);
+            dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.line_support_points);//FE collocated on the reference mapping support points
+            //dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.shape_info.data[0].quadrature);
             const dealii::FESystem<dim,dim> fe_system(fe_dg, 1);
             fe_collection.push_back (fe_system);
             dealii::Quadrature<dim> vol_quad(data.shape_info.data[0].quadrature);
             volume_quadrature_collection.push_back(vol_quad);
+
+            const std::vector<unsigned int> &renumber_to_lexicographic =
+              data.shape_info.lexicographic_numbering;
                 for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
                     for(int idim=0; idim<dim; idim++){
                             for(int kdim=0; kdim<dim; kdim++){
                                 grad_Xl[iquad][idim][kdim] =0.0;
                                 for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
-                                    const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
                                     dealii::Tensor<1,dim,double> derivative;
                                     derivative = fe_collection[0].shape_grad_component(idof, qpoint, 0);
                                     grad_Xl[iquad][idim][kdim] += 
                                        derivative[kdim]
-                                        * quadrature_points[idof][idim];
+                                        //* quadrature_points[idof][idim];
+                                    //    * data.values_dofs[idof][idim];//differentiate the interpolation to quad points
+                                            *data
+                                                .mapping_support_points[renumber_to_lexicographic[idof]][idim];
                                 }
                             }
                     }
                 }
+
+            //write the contravariant basis for conservative curl form
+            for (unsigned int point = 0; point < n_q_points; ++point){
+                for(int idim=0; idim<dim; idim++){
+                    for(int jdim=0; jdim<spacedim; jdim++){
+                        data.contravariant[point][idim][jdim]=grad_Xl[point][idim][jdim];
+                    }
+                }
+            }
 
             //for 2D Cross-Product Form = Cons Curl form
             for (unsigned int point = 0; point < n_q_points; ++point){
@@ -1646,27 +1666,6 @@ namespace internal
             }
         }
         if(dim == 3){
-            std::vector<dealii::DerivativeForm<1,dim,spacedim>> Xl_grad_Xm(n_q_points);
-            for(unsigned int iquad=0; iquad<n_q_points; iquad++){
-            for(int ndim=0; ndim<spacedim; ndim++){
-                int mdim, ldim;//ndim, mdim, ldim cyclic indices
-                if(ndim == dim-1){
-                    mdim = 0;
-                }
-                else{
-                    mdim = ndim + 1;
-                }
-                if(ndim == 0){
-                    ldim = dim - 1;
-                }
-                else{
-                    ldim = ndim - 1;
-                }
-                for(int i=0; i<dim; ++i){
-                    Xl_grad_Xm[iquad][ndim][i] = quadrature_points[iquad][ldim] * data.contravariant[iquad][mdim][i];
-                }
-            }
-            }
 
             //Since the metric Jacobian is built at the volume cubature nodes (quadrature/flux points)
             //it's basis wrt. the reference element is collocated, thus we construct an arbitrary
@@ -1676,21 +1675,75 @@ namespace internal
             std::vector<dealii::DerivativeForm<2,dim,spacedim>> grad_Xl_grad_Xm(n_q_points);
             dealii::hp::FECollection<dim> fe_collection;
             dealii::hp::QCollection<dim> volume_quadrature_collection;
-            dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.shape_info.data[0].quadrature);
+           // dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.shape_info.data[0].quadrature);
+            dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.line_support_points);//FE collocated on the reference mapping support points
             const dealii::FESystem<dim,dim> fe_system(fe_dg, 1);
             fe_collection.push_back (fe_system);
+            //store quadrature points
             dealii::Quadrature<dim> vol_quad(data.shape_info.data[0].quadrature);
             volume_quadrature_collection.push_back(vol_quad);
+            //store mapping support quadrature points in reference element
+            dealii::hp::QCollection<dim> mapping_support_quad_collection;
+            dealii::Quadrature<dim> vol_quad_mapping_support(data.line_support_points);
+            mapping_support_quad_collection.push_back(vol_quad_mapping_support);
             //note we assume n_quad_points == n_dofs_per_cell for differentiating the basis on the
             //quadrtaure nodes.
 
+            //get derivative at mapping support points
+            std::vector<dealii::DerivativeForm<1,dim,spacedim>> grad_Xm(n_q_points);
+            const std::vector<unsigned int> &renumber_to_lexicographic =
+              data.shape_info.lexicographic_numbering;
                 for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    const dealii::Point<dim> qpoint  = mapping_support_quad_collection[0].point(iquad);
+                    for(int idim=0; idim<dim; idim++){
+                            for(int kdim=0; kdim<dim; kdim++){
+                                grad_Xm[iquad][idim][kdim] =0.0;
+                                for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
+                                    dealii::Tensor<1,dim,double> derivative;
+                                    derivative = fe_collection[0].shape_grad_component(idof, qpoint, 0);
+                                    grad_Xm[iquad][idim][kdim] += 
+                                       derivative[kdim]
+                    //                    * data.values_dofs[idof][idim];//differentiate the interpolation to quad points
+                                            *data
+                                                .mapping_support_points[renumber_to_lexicographic[idof]][idim];
+                                }
+                            }
+                    }
+                }
+            // X_l * \nabla(X_m) applied first at mapping support points as to have consistent normals/water-tight mesh
+            std::vector<dealii::DerivativeForm<1,dim,spacedim>> Xl_grad_Xm(n_q_points);
+            for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                for(int ndim=0; ndim<spacedim; ndim++){
+                    int mdim, ldim;//ndim, mdim, ldim cyclic indices
+                    if(ndim == dim-1){
+                        mdim = 0;
+                    }
+                    else{
+                        mdim = ndim + 1;
+                    }
+                    if(ndim == 0){
+                        ldim = dim - 1;
+                    }
+                    else{
+                        ldim = ndim - 1;
+                    }
+                    for(int i=0; i<dim; ++i){
+                       // Xl_grad_Xm[iquad][ndim][i] = quadrature_points[iquad][ldim] * data.contravariant[iquad][mdim][i];
+                       // Xl_grad_Xm[iquad][ndim][i] = data.values_dofs[iquad][ldim] * grad_Xm[iquad][mdim][i];
+                        Xl_grad_Xm[iquad][ndim][i] =  data.mapping_support_points[renumber_to_lexicographic[iquad]][ldim]
+                                                       * grad_Xm[iquad][mdim][i];
+                    }
+                }
+            }
+
+            //now get the derivative of X_l*nabla(X_m) evaluated at the quadrature/flux nodes
+                for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
                     for(int idim=0; idim<dim; idim++){
                         for(int jdim=0; jdim<dim; jdim++){
                             for(int kdim=0; kdim<dim; kdim++){
                                 grad_Xl_grad_Xm[iquad][idim][jdim][kdim] =0.0;
                                 for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
-                                    const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
                                     dealii::Tensor<1,dim,double> derivative;
                                     derivative = fe_collection[0].shape_grad_component(idof, qpoint, 0);
                                     grad_Xl_grad_Xm[iquad][idim][jdim][kdim] += 
@@ -1728,6 +1781,28 @@ namespace internal
                 }
             }
             }
+
+            //Lastly, we need the contravariant expression corresponding to the interpolation
+            std::vector<dealii::DerivativeForm<1,dim,spacedim>> grad_X_xhat(n_q_points);
+                for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    for(int idim=0; idim<dim; idim++){
+                            for(int kdim=0; kdim<dim; kdim++){
+                                grad_X_xhat[iquad][idim][kdim] =0.0;
+                                const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
+                                for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
+                                    dealii::Tensor<1,dim,double> derivative;
+                                    derivative = fe_collection[0].shape_grad_component(idof, qpoint, 0);
+                                    grad_X_xhat[iquad][idim][kdim] += 
+                                       derivative[kdim]
+                                            *data
+                                                .mapping_support_points[renumber_to_lexicographic[idof]][idim];
+                                }
+                                data.contravariant[iquad][idim][kdim] = grad_X_xhat[iquad][idim][kdim];
+                            }
+                    }
+                }
+
+
             //write/store the covariant representation
             for (unsigned int point = 0; point < n_q_points; ++point){
                 for(int idim=0; idim<dim; idim++){
@@ -1808,6 +1883,26 @@ namespace internal
                   result[i] += shape[k] * data.mapping_support_points[k][i];
               quadrature_points[point] = result;
             }
+
+
+            dealii::QGaussLobatto<dim> GLL (data.polynomial_degree+1);
+            dealii::QGauss<dim-1> GL (data.polynomial_degree+1);
+            const unsigned int n_q_points = quadrature_points.size();
+            std::vector<dealii::Point<dim>> interp(n_q_points);
+               // const std::vector<unsigned int> &renumber_to_lexicographic =
+               // data.shape_info.lexicographic_numbering;
+            for(unsigned int iquad=0; iquad<n_q_points; iquad++){ 
+              const double *  shape = &data.shape(iquad + data_set, 0);
+                interp[iquad] = shape[0] * GLL.point(0);
+                for(int idim=0; idim<dim; idim++){
+                    for(unsigned int idof=1; idof<data.n_shape_functions; idof++){
+                        interp[iquad][idim] += shape[ idof]*GLL.point(idof)[idim];
+                    }
+                printf(" interp %g vs GL %g for idim %d iquad %d\n", interp[iquad][idim], GL.point(iquad)[0],idim, iquad);
+                }
+            }
+
+
       }
 
 
@@ -1847,6 +1942,10 @@ namespace internal
               const Tensor<1, spacedim> *supp_pts =
                 data.mapping_support_points.data();
 
+printf("q points %d shap functions %d\n",n_q_points, data.n_shape_functions);
+for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+printf("the data line supp pts %g for iquad%d\n",data.line_support_points.point(iquad)[0],iquad);
+}
               for (unsigned int point = 0; point < n_q_points; ++point)
                 {
                   const Tensor<1, dim> *data_derv =
@@ -3122,6 +3221,7 @@ namespace internal
       {
         const UpdateFlags update_flags = data.update_each;
 
+printf("Normals computed here\n");
         if (update_flags &
             (update_boundary_forms | update_normal_vectors | update_jacobians |
              update_JxW_values | update_inverse_jacobians))
@@ -3170,6 +3270,7 @@ namespace internal
                 // the boundary form by simply taking the cross product
                 if (dim == spacedim)
                   {
+printf("Normals comp change here\n");
                     for (unsigned int i = 0; i < n_q_points; ++i)
                       switch (dim)
                         {
@@ -3183,8 +3284,10 @@ namespace internal
                               (face_no == 0 ? -1 : +1);
                             break;
                           case 2:
+printf("aux %g  %g\n",data.aux[0][i][0],data.aux[0][i][1]);
                             output_data.boundary_forms[i] =
                               cross_product_2d(data.aux[0][i]);
+printf("boundary form %g %g\n",output_data.boundary_forms[i][0],output_data.boundary_forms[i][1]);
                             break;
                           case 3:
                             output_data.boundary_forms[i] =
@@ -3250,12 +3353,14 @@ namespace internal
                     }
                 }
 
-            if (update_flags & update_normal_vectors)
+            if (update_flags & update_normal_vectors){
+printf("Normals input change here\n");
               for (unsigned int i = 0; i < output_data.normal_vectors.size();
                    ++i)
                 output_data.normal_vectors[i] =
                   Point<spacedim>(output_data.boundary_forms[i] /
                                   output_data.boundary_forms[i].norm());
+            }
 
             if (update_flags & update_jacobians)
               for (unsigned int point = 0; point < n_q_points; ++point)
@@ -3265,8 +3370,123 @@ namespace internal
               for (unsigned int point = 0; point < n_q_points; ++point)
                 output_data.inverse_jacobians[point] =
                   data.covariant[point].transpose();
+
+//#if 0
+            const bool conservative_curl_metric = true;
+            if(conservative_curl_metric == true){ 
+printf("in cons curl\n");
+            if(dim==2){
+printf("in it 2D\n");
+
+                std::vector<dealii::DerivativeForm<1,dim,spacedim>> grad_Xl(n_q_points);
+                dealii::hp::FECollection<dim> fe_collection;
+                dealii::hp::QCollection<dim-1> face_quadrature_collection;
+                dealii::FE_DGQArbitraryNodes<dim> fe_dg(data.line_support_points);//FE collocated on the reference mapping support points
+                const dealii::FESystem<dim,dim> fe_system(fe_dg, 1);
+                fe_collection.push_back (fe_system);
+            dealii::QGauss<1> quad_GL (data.polynomial_degree+1);
+            //    dealii::Quadrature<dim-1> face_quad(data.shape_info.data[0].quadrature);
+                dealii::Quadrature<dim-1> face_quad(quad_GL);
+                face_quadrature_collection.push_back(face_quad);
+
+                const std::vector<unsigned int> &renumber_to_lexicographic =
+                data.shape_info.lexicographic_numbering;
+                std::vector<dealii::Point<dim>> qpoint(n_q_points);
+                dealii::QProjector<dim>::project_to_face(face_quadrature_collection[0], face_no, qpoint);
+printf("num q points %d num mapp supp points %ld line supp size %d\n",n_q_points, data.mapping_support_points.size(),data.line_support_points.size());
+printf(" renum to lex size %ld vs %ld data value dofs %ld outputdata quad %ld\n",renumber_to_lexicographic.size(),data.shape_info.lexicographic_numbering.size(), data.values_dofs.size(), output_data.quadrature_points.size());
+//printf(" data data %ld\n", data.shape_info.data[0].shape_data_on_face[0].size());
+for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+printf(" quad pt ouput %g face no %d\n",output_data.quadrature_points[iquad][0],face_no);
+}
+//printf("num q points %d mapping supp %g\n",n_q_points,data.mapping_support_points[renumber_to_lexicographic[n_q_points-1]][1]);
+#if 0
+                for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                  //  const dealii::Point<dim-1> qpoint  = face_quadrature_collection[0].point(iquad);
+                    for(int idim=0; idim<dim; idim++){
+                            for(int kdim=0; kdim<dim; kdim++){
+                                grad_Xl[iquad][idim][kdim] =0.0;
+                               // for(unsigned int idof=0; idof<n_q_points; idof++){//assume n_dofs_cell==n_quad_points
+                                for(unsigned int idof=0; idof<data.n_shape_functions; idof++){//assume n_dofs_cell==n_quad_points
+                                    dealii::Tensor<1,dim,double> derivative;
+                                    derivative = fe_collection[0].shape_grad_component(idof, qpoint[iquad], 0);
+                                    grad_Xl[iquad][idim][kdim] += 
+                                       derivative[kdim]
+                                            *data.mapping_support_points[renumber_to_lexicographic[idof]][idim];
+                                }
+                            }
+                    }
+                }
+
+            //write the contravariant basis for conservative curl form
+            for (unsigned int point = 0; point < n_q_points; ++point){
+                for(int idim=0; idim<dim; idim++){
+                    for(int jdim=0; jdim<spacedim; jdim++){
+                        data.contravariant[point][idim][jdim]=grad_Xl[point][idim][jdim];
+                    }
+                }
+            }
+            if (update_flags & update_JxW_values){
+              for (unsigned int i = 0; i < output_data.boundary_forms.size();
+                   ++i)
+                {
+                  output_data.JxW_values[i] =
+                    data.contravariant[i].determinant() * weights[i];
+                }
+            }
+
+            //for 2D Cross-Product Form = Cons Curl form
+            for (unsigned int point = 0; point < n_q_points; ++point){
+                for(int idim=0; idim<dim; idim++){
+                    for(int jdim=0; jdim<spacedim; jdim++){
+                        if(idim == jdim){
+                            int mdim = (idim == 0) ? 1 : 0;
+                            data.covariant[point][idim][jdim] =  grad_Xl[point][mdim][mdim] / data.contravariant[point].determinant();
+                        }
+                        else{//negative transpose
+                            data.covariant[point][idim][jdim] = - grad_Xl[point][jdim][idim] / data.contravariant[point].determinant();
+                        }
+                    }
+                }
+            }
+
+            if (update_flags & update_jacobians){
+              for (unsigned int point = 0; point < n_q_points; ++point)
+                output_data.jacobians[point] = data.contravariant[point];
+            }
+
+            if (update_flags & update_inverse_jacobians){
+              for (unsigned int point = 0; point < n_q_points; ++point)
+                output_data.inverse_jacobians[point] =
+                  data.covariant[point].transpose();
+            }
+
+        //normals
+            if (update_flags & update_normal_vectors){
+                const dealii::Tensor<1,dim> unit_normal = dealii::GeometryInfo<dim>::unit_normal_vector[face_no];
+                for(unsigned int iquad=0; iquad<n_q_points; iquad++){
+                    for(unsigned int idim=0; idim<dim; idim++){
+                        output_data.normal_vectors[iquad][idim] =  0.0;
+                        for(int idim2=0; idim2<dim; idim2++){
+                            output_data.normal_vectors[iquad][idim] += unit_normal[idim2] * data.covariant[iquad][idim2][idim];//\hat{n}^r * C_m^T 
+                        }
+                    }
+                }
+            }
+printf("got it 2D\n");
+
+#endif
+
+            }//end of dim=2
+            if(dim==3){
+
+            }
+
+
+          }//end of conservative curl metric
+//#endif
           }
-      }
+      }//end of function
 
 
       /**
@@ -3292,6 +3512,7 @@ namespace internal
       {
         if (dim > 1 && data.tensor_product_quadrature)
           {
+printf("def not here for normals lol\n");
             maybe_update_q_points_Jacobians_and_grads_tensor<dim, spacedim>(
               CellSimilarity::none,
               data,
@@ -3300,6 +3521,7 @@ namespace internal
           }
         else
           {
+printf("WAIT GETS STUFF HERE FOR NORMALS!!!\n");
             maybe_compute_q_points<dim, spacedim>(
               data_set, data, output_data.quadrature_points);
             maybe_update_Jacobians<dim, spacedim>(CellSimilarity::none,

@@ -103,21 +103,21 @@ dealii::Point<dim> CurvManifold<dim>::pull_back(const dealii::Point<dim> &space_
     int flag =0;
     while(flag != dim){
 
-        function[0] = x_ref[0] - x_phys[0] +1.0/40.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        function[1] = x_ref[1] - x_phys[1] +1.0/40.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
-        function[2] = x_ref[2] - x_phys[2] +1.0/40.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        function[0] = x_ref[0] - x_phys[0] +1.0/10.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        function[1] = x_ref[1] - x_phys[1] +1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        function[2] = x_ref[2] - x_phys[2] +1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
 
-        derivative[0][0] = 1.0 - 1.0/40.0* pi/2.0 * std::sin(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        derivative[0][1] =  - 1.0/40.0*3.0 *pi/2.0 * std::cos(pi/2.0*x_ref[0])*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        derivative[0][2] =  1.0/40.0*2.0*pi * std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(2.0*pi*(x_ref[2]));
+        derivative[0][0] = 1.0 - 1.0/10.0* pi/2.0 * std::sin(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        derivative[0][1] =  - 1.0/10.0*3.0 *pi/2.0 * std::cos(pi/2.0*x_ref[0])*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        derivative[0][2] =  1.0/10.0*2.0*pi * std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(2.0*pi*(x_ref[2]));
 
-        derivative[1][0] =  1.0/40.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
-        derivative[1][1] =  1.0 -1.0/40.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));  
-        derivative[1][2] =  1.0/40.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::cos(3.0*pi/2.0*(x_ref[2]));
+        derivative[1][0] =  1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        derivative[1][1] =  1.0 -1.0/10.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));  
+        derivative[1][2] =  1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::cos(3.0*pi/2.0*(x_ref[2]));
 
-        derivative[2][0] = 1.0/40.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
-        derivative[2][1] = - 1.0/40.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
-        derivative[2][2] = 1.0 + 1.0/40.0*5.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(5.0*pi/2.0*(x_ref[2]));
+        derivative[2][0] = 1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        derivative[2][1] = - 1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        derivative[2][2] = 1.0 + 1.0/10.0*5.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(5.0*pi/2.0*(x_ref[2]));
 
         dealii::FullMatrix<double> Jacobian_inv(dim);
         Jacobian_inv.invert(derivative);
@@ -135,9 +135,9 @@ dealii::Point<dim> CurvManifold<dim>::pull_back(const dealii::Point<dim> &space_
             break;
     }
     std::vector<double> function_check(dim);
-        function_check[0] = x_ref[0] + 1.0/40.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        function_check[1] = x_ref[1] + 1.0/40.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
-        function_check[2] = x_ref[2] + 1.0/40.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        function_check[0] = x_ref[0] + 1.0/10.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        function_check[1] = x_ref[1] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        function_check[2] = x_ref[2] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
     std::vector<double> error(dim);
     for(int idim=0; idim<dim; idim++) 
         error[idim] = std::abs(function_check[idim] - x_phys[idim]);
@@ -161,9 +161,9 @@ dealii::Point<dim> CurvManifold<dim>::push_forward(const dealii::Point<dim> &cha
     for(int idim=0; idim<dim; idim++)
         x_ref[idim] = chart_point[idim];
 
-        x_phys[0] = x_ref[0] + 1.0/40.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        x_phys[1] = x_ref[1] + 1.0/40.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
-        x_phys[2] = x_ref[2] + 1.0/40.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        x_phys[0] = x_ref[0] + 1.0/10.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        x_phys[1] = x_ref[1] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        x_phys[2] = x_ref[2] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
     return dealii::Point<dim> (x_phys); // Trigonometric
 }
 
@@ -177,17 +177,17 @@ dealii::DerivativeForm<1,dim,dim> CurvManifold<dim>::push_forward_gradient(const
         x_ref[idim] = chart_point[idim];
     }
 
-        dphys_dref[0][0] = 1.0 - 1.0/40.0*pi/2.0 * std::sin(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        dphys_dref[0][1] =  - 1.0/40.0*3.0*pi/2.0 * std::cos(pi/2.0*x_ref[0])*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
-        dphys_dref[0][2] =  1.0/40.0*2.0*pi * std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(2.0*pi*(x_ref[2]));
+        dphys_dref[0][0] = 1.0 - 1.0/10.0*pi/2.0 * std::sin(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        dphys_dref[0][1] =  - 1.0/10.0*3.0*pi/2.0 * std::cos(pi/2.0*x_ref[0])*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        dphys_dref[0][2] =  1.0/10.0*2.0*pi * std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(2.0*pi*(x_ref[2]));
 
-        dphys_dref[1][0] =  1.0/40.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
-        dphys_dref[1][1] =  1.0 -1.0/40.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));  
-        dphys_dref[1][2] =  1.0/40.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::cos(3.0*pi/2.0*(x_ref[2]));
+        dphys_dref[1][0] =  1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        dphys_dref[1][1] =  1.0 -1.0/10.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));  
+        dphys_dref[1][2] =  1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::cos(3.0*pi/2.0*(x_ref[2]));
 
-        dphys_dref[2][0] = 1.0/40.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
-        dphys_dref[2][1] = -1.0/40.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
-        dphys_dref[2][2] = 1.0 + 1.0/40.0*5.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(5.0*pi/2.0*(x_ref[2]));
+        dphys_dref[2][0] = 1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        dphys_dref[2][1] = -1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        dphys_dref[2][2] = 1.0 + 1.0/10.0*5.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(5.0*pi/2.0*(x_ref[2]));
 
     return dphys_dref;
 }
@@ -210,9 +210,9 @@ static dealii::Point<dim> warp (const dealii::Point<dim> &p)
     }
     if(dim==3){
         //non sym transform
-        q[dim-1] =p[dim-1] +  1.0/40.0*std::cos(pi/2.0 * p[dim-1]) * std::cos(3.0 * pi/2.0 * p[dim-2]) * std::sin(2.0 * pi * (p[dim-3]));
-        q[dim-2] =p[dim-2] +  1.0/40.0*std::sin(2.0 * pi * (p[dim-1])) * std::cos(pi /2.0 * p[dim-2]) * std::sin(3.0 * pi /2.0 * p[dim-3]);
-        q[dim-3] =p[dim-3] +  1.0/40.0*std::sin(2.0 * pi * (p[dim-1])) * std::cos(3.0 * pi/2.0 * p[dim-2]) * std::cos(5.0 * pi/2.0 * p[dim-3]);
+        q[0] =p[0] +  1.0/10.0*std::cos(pi/2.0 * p[0]) * std::cos(3.0 * pi/2.0 * p[1]) * std::sin(2.0 * pi * (p[2]));
+        q[1] =p[1] +  1.0/10.0*std::sin(2.0 * pi * (p[0])) * std::cos(pi /2.0 * p[1]) * std::sin(3.0 * pi /2.0 * p[2]);
+        q[2] =p[2] +  1.0/10.0*std::sin(2.0 * pi * (p[0])) * std::cos(3.0 * pi/2.0 * p[1]) * std::cos(5.0 * pi/2.0 * p[2]);
     }
 
     return q;
@@ -282,7 +282,8 @@ int main (int argc, char * argv[])
             locally_relevant_dofs = ghost_dofs;
             ghost_dofs.subtract_set(locally_owned_dofs);
 
-            const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree+1);
+           // const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree+1);
+            const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree);
     
 
     const unsigned int n_quad_pts      = volume_quadrature_collection[0].size();

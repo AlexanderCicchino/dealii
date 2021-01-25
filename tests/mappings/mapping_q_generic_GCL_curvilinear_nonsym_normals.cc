@@ -17,7 +17,11 @@
  *through MappingQGeneric the metric terms satisfy the
  *Geometric Conservation Law allowing the scheme to satisfy
  *Free Stream Preservation
- *
+ * AND it checks that the normals are such that the mesh is
+ * (i) water-tight
+ * (ii) normals are consistent across face (ie/ normal_right = - normal_left)
+ * (iii) the metric terms satisfy integration-by-parts with the normals 
+ *      on the face
  *******************************************************/
 
 
@@ -102,26 +106,22 @@ dealii::Point<dim> CurvManifold<dim>::pull_back(const dealii::Point<dim> &space_
     dealii::FullMatrix<double> derivative(dim);
     int flag =0;
     while(flag != dim){
-        for(int idim=0;idim<dim;idim++){
-            function[idim] = 1.0/20.0; 
-            for(int idim2=0;idim2<dim;idim2++){
-                function[idim] *= std::cos(2.0 * pi* x_ref[idim2]);
-            }
-            function[idim] += x_ref[idim] - x_phys[idim];
-        }
-        for(int idim=0; idim<dim; idim++){
-            for(int idim2=0; idim2<dim;idim2++){
-                derivative[idim][idim2] = - 1.0/20.0*2.0 * pi;
-                for(int idim3 =0;idim3<dim; idim3++){
-                    if(idim2 == idim3)
-                        derivative[idim][idim2] *=std::sin(2.0 * pi * x_ref[idim3]);
-                    else
-                        derivative[idim][idim2] *=std::cos(2.0 * pi* x_ref[idim3]);
-                }
-                if(idim == idim2)
-                    derivative[idim][idim2] += 1.0;
-            }
-        }
+
+        function[0] = x_ref[0] - x_phys[0] +1.0/10.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        function[1] = x_ref[1] - x_phys[1] +1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        function[2] = x_ref[2] - x_phys[2] +1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+
+        derivative[0][0] = 1.0 - 1.0/10.0* pi/2.0 * std::sin(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        derivative[0][1] =  - 1.0/10.0*3.0 *pi/2.0 * std::cos(pi/2.0*x_ref[0])*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        derivative[0][2] =  1.0/10.0*2.0*pi * std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(2.0*pi*(x_ref[2]));
+
+        derivative[1][0] =  1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        derivative[1][1] =  1.0 -1.0/10.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));  
+        derivative[1][2] =  1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::cos(3.0*pi/2.0*(x_ref[2]));
+
+        derivative[2][0] = 1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        derivative[2][1] = - 1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        derivative[2][2] = 1.0 + 1.0/10.0*5.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(5.0*pi/2.0*(x_ref[2]));
 
         dealii::FullMatrix<double> Jacobian_inv(dim);
         Jacobian_inv.invert(derivative);
@@ -139,13 +139,9 @@ dealii::Point<dim> CurvManifold<dim>::pull_back(const dealii::Point<dim> &space_
             break;
     }
     std::vector<double> function_check(dim);
-    for(int idim=0;idim<dim; idim++){
-        function_check[idim] = 1.0/20.0;
-        for(int idim2=0; idim2<dim; idim2++){
-            function_check[idim] *= std::cos(2.0 * pi * x_ref[idim2]);
-        }
-        function_check[idim] += x_ref[idim];
-    }
+        function_check[0] = x_ref[0] + 1.0/10.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        function_check[1] = x_ref[1] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        function_check[2] = x_ref[2] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
     std::vector<double> error(dim);
     for(int idim=0; idim<dim; idim++) 
         error[idim] = std::abs(function_check[idim] - x_phys[idim]);
@@ -168,13 +164,10 @@ dealii::Point<dim> CurvManifold<dim>::push_forward(const dealii::Point<dim> &cha
     dealii::Point<dim> x_phys;
     for(int idim=0; idim<dim; idim++)
         x_ref[idim] = chart_point[idim];
-    for(int idim=0; idim<dim; idim++){
-        x_phys[idim] = 1.0/20.0;
-        for(int idim2=0;idim2<dim; idim2++){
-           x_phys[idim] *= std::cos( 2.0 * pi * x_ref[idim2]);
-        }
-        x_phys[idim] += x_ref[idim];
-    }
+
+        x_phys[0] = x_ref[0] + 1.0/10.0*std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        x_phys[1] = x_ref[1] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        x_phys[2] = x_ref[2] + 1.0/10.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
     return dealii::Point<dim> (x_phys); // Trigonometric
 }
 
@@ -183,22 +176,22 @@ dealii::DerivativeForm<1,dim,dim> CurvManifold<dim>::push_forward_gradient(const
 {
     const double pi = atan(1)*4.0;
     dealii::DerivativeForm<1, dim, dim> dphys_dref;
-    dealii::Point<dim> x;
-    for(int idim=0; idim<dim; idim++)
-        x[idim] = chart_point[idim];
+    dealii::Point<dim> x_ref;
     for(int idim=0; idim<dim; idim++){
-        for(int idim2=0; idim2<dim;idim2++){
-            dphys_dref[idim][idim2] = - 1.0/20.0*2.0 * pi;
-            for(int idim3 =0;idim3<dim; idim3++){
-                if(idim2 == idim3)
-                    dphys_dref[idim][idim2] *=std::sin(2.0 * pi * x[idim3]);
-                else
-                     dphys_dref[idim][idim2] *=std::cos(2.0 * pi* x[idim3]);
-            }     
-            if(idim == idim2)
-                dphys_dref[idim][idim2] += 1.0;
-        }
+        x_ref[idim] = chart_point[idim];
     }
+
+        dphys_dref[0][0] = 1.0 - 1.0/10.0*pi/2.0 * std::sin(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        dphys_dref[0][1] =  - 1.0/10.0*3.0*pi/2.0 * std::cos(pi/2.0*x_ref[0])*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(2.0*pi*(x_ref[2]));
+        dphys_dref[0][2] =  1.0/10.0*2.0*pi * std::cos(pi/2.0*x_ref[0])*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(2.0*pi*(x_ref[2]));
+
+        dphys_dref[1][0] =  1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));
+        dphys_dref[1][1] =  1.0 -1.0/10.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(pi/2.0*x_ref[1])*std::sin(3.0*pi/2.0*(x_ref[2]));  
+        dphys_dref[1][2] =  1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(pi/2.0*x_ref[1])*std::cos(3.0*pi/2.0*(x_ref[2]));
+
+        dphys_dref[2][0] = 1.0/10.0*2.0*pi*std::cos(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        dphys_dref[2][1] = -1.0/10.0*3.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::sin(3.0*pi/2.0*x_ref[1])*std::sin(5.0*pi/2.0*(x_ref[2]));
+        dphys_dref[2][2] = 1.0 + 1.0/10.0*5.0*pi/2.0*std::sin(2.0*pi*(x_ref[0]))*std::cos(3.0*pi/2.0*x_ref[1])*std::cos(5.0*pi/2.0*(x_ref[2]));
 
     return dphys_dref;
 }
@@ -220,9 +213,10 @@ static dealii::Point<dim> warp (const dealii::Point<dim> &p)
         q[dim-2] = p[dim-2] + 1.0/8.0 * std::cos(3.0 * pi/2.0 * p[dim-1]) * std::cos(3.0 * pi/2.0 * p[dim-2]);
     }
     if(dim==3){
-        q[dim-1] =p[dim-1] + 1.0/20.0*  std::cos(2.0 * pi * p[dim-1]) * std::cos(2.0 * pi * p[dim-2]) * std::cos(2.0 * pi * p[dim-3]);
-        q[dim-2] =p[dim-2] +  1.0/20.0* std::cos(2.0 * pi * p[dim-1]) * std::cos(2.0 * pi * p[dim-2]) * std::cos(2.0 * pi * p[dim-3]);
-        q[dim-3] =p[dim-3] +  1.0/20.0* std::cos(2.0 * pi * p[dim-1]) * std::cos(2.0 * pi * p[dim-2]) * std::cos(2.0 * pi * p[dim-3]);
+        //non sym transform
+        q[0] =p[0] +  1.0/10.0*std::cos(pi/2.0 * p[0]) * std::cos(3.0 * pi/2.0 * p[1]) * std::sin(2.0 * pi * (p[2]));
+        q[1] =p[1] +  1.0/10.0*std::sin(2.0 * pi * (p[0])) * std::cos(pi /2.0 * p[1]) * std::sin(3.0 * pi /2.0 * p[2]);
+        q[2] =p[2] +  1.0/10.0*std::sin(2.0 * pi * (p[0])) * std::cos(3.0 * pi/2.0 * p[1]) * std::cos(5.0 * pi/2.0 * p[2]);
     }
 
     return q;
@@ -241,8 +235,8 @@ int main (int argc, char * argv[])
     const int dim = 3;
     const int nstate = 1;
 
-
     double max_GCL = 0.0;
+    double max_diff_int_parts = 0.0;
     for(unsigned int poly_degree = 2; poly_degree<6; poly_degree++){
 
     double left = 0.0;
@@ -275,12 +269,15 @@ int main (int argc, char * argv[])
 //build FE Collection
             dealii::hp::FECollection<dim> fe_collection;
             dealii::hp::QCollection<dim> volume_quadrature_collection;
+            dealii::hp::QCollection<dim-1> face_quadrature_collection;
             dealii::QGauss<1> one_d_lag (poly_degree+1);
 	    dealii::FE_DGQArbitraryNodes<dim,dim> fe_dg(one_d_lag);
             const dealii::FESystem<dim,dim> fe_system(fe_dg, nstate);
             fe_collection.push_back (fe_system);
             dealii::Quadrature<dim> vol_quad_Gauss_Legendre (one_d_lag);
             volume_quadrature_collection.push_back(vol_quad_Gauss_Legendre);
+            dealii::Quadrature<dim-1> face_quad_Gauss_Legendre (one_d_lag);
+            face_quadrature_collection.push_back(face_quad_Gauss_Legendre);
             dealii::hp::DoFHandler<dim> dof_handler;
             dealii::IndexSet locally_owned_dofs;
             dealii::IndexSet ghost_dofs;
@@ -299,18 +296,32 @@ int main (int argc, char * argv[])
 
     const unsigned int n_quad_pts      = volume_quadrature_collection[0].size();
     const unsigned int n_dofs_cell     =fe_collection[0].dofs_per_cell;
+    //dealii::QGauss<dim> quad_val(poly_degree+1);
+   // dealii::QGaussLobatto<dim> quad_val(poly_degree+1);
     dealii::FEValues<dim,dim> fe_values_vol(mapping_collection, fe_collection[0], volume_quadrature_collection[0], 
                                 dealii::update_values | dealii::update_JxW_values | 
                                 dealii::update_quadrature_points | dealii::update_inverse_jacobians);
+
+//decalre face fe val
+    dealii::FEFaceValues<dim,dim>    fe_values_face(mapping_collection, fe_collection[0], face_quadrature_collection[0], dealii::update_values | dealii::update_gradients | dealii::update_quadrature_points | dealii::update_JxW_values | dealii::update_normal_vectors | dealii::update_jacobians | dealii::update_inverse_jacobians);
+
+
     const unsigned int max_dofs_per_cell = dof_handler.get_fe_collection().max_dofs_per_cell();
     std::vector<dealii::types::global_dof_index> current_dofs_indices(max_dofs_per_cell);
     std::vector<dealii::FullMatrix<real>> local_derivative_operator(dim);
     for(int idim=0; idim<dim; idim++){
        local_derivative_operator[idim].reinit(n_quad_pts, n_dofs_cell);
     }
+    dealii::FullMatrix<real> W(n_quad_pts);
+    const std::vector<real> &quad_weights = volume_quadrature_collection[0].get_weights ();
     for(int istate=0; istate<nstate; istate++){
     for (unsigned int iquad=0; iquad<n_quad_pts; ++iquad) {
         for (unsigned int idof=0; idof<n_dofs_cell; ++idof) {
+            if(idof==iquad)
+                W[iquad][idof] = quad_weights[iquad];
+            else
+                W[iquad][idof] =0.0;
+    
             dealii::Tensor<1,dim,real> derivative;
             const dealii::Point<dim> qpoint  = volume_quadrature_collection[0].point(iquad);
             derivative = fe_collection[0].shape_grad_component(idof, qpoint, istate);
@@ -320,6 +331,11 @@ int main (int argc, char * argv[])
         }
     }
     }
+            dealii::FullMatrix<real> int_parts_facet_lift(n_dofs_cell);
+            dealii::FullMatrix<real> facet_lift(n_dofs_cell);//the surface lifting operator formed by the normals on the surface
+            //IE \int{\chi^T \hat{n}_m \chi d\Gamma_r} where _r is reference, _m means the covariant transofmration of the reference normal to physical
+            // so \hat{n}_m = \hat{n}^r * C_m^T, where (C_m)_{i,j} = J*a_i^j, and \chi is the N_p basis functions
+
             for (auto current_cell = dof_handler.begin_active(); current_cell!=dof_handler.end(); ++current_cell) {
                 if (!current_cell->is_locally_owned()) continue;
 	
@@ -387,11 +403,80 @@ int main (int argc, char * argv[])
                     }
                 }
 
+    //get int by parts
+            std::vector<dealii::FullMatrix<real>> W_D(dim);
+            for(int idim=0; idim<dim; idim++){
+                W_D[idim].reinit(n_quad_pts, n_dofs_cell);
+            }
+            for(int idim=0; idim<dim; idim++){
+                W.mmult(W_D[idim], local_derivative_operator[idim]);
+            }
+            std::vector<dealii::FullMatrix<real>> ref_int_parts(dim);
+            for(int idim=0; idim<dim; idim++){
+                ref_int_parts[idim].reinit(n_quad_pts, n_dofs_cell);
+            }
+            for(int idim=0; idim<dim; idim++){//ref_int parts = W*D +(W*D)^T
+                for(unsigned int iquad=0; iquad<n_quad_pts; iquad++){
+                    for(unsigned int idof=0; idof<n_dofs_cell; idof++){
+                        ref_int_parts[idim][iquad][idof] = W_D[idim][iquad][idof] + W_D[idim][idof][iquad];
+                    }
+                }
+            }
+            for(int idim=0;idim<dim; idim++){
+                for(int idim2=0;idim2<dim; idim2++){
+                    ref_int_parts[idim2].mmult(int_parts_facet_lift, Gij[idim2][idim], true); 
+                }
+            }
+
             }
                 printf("max GCL %g for polynomial degree %d\n", max_GCL, poly_degree);
 
+        
+            for (auto current_cell = dof_handler.begin_active(); current_cell!=dof_handler.end(); ++current_cell) {
+                for (unsigned int iface=0; iface < dealii::GeometryInfo<dim>::faces_per_cell; ++iface) {
+                    fe_values_face.reinit(current_cell, iface);
+                    const std::vector<dealii::Tensor<1,dim> > &normals_int = fe_values_face.get_normal_vectors ();
+                    dealii::FullMatrix<real> this_face_lift(n_dofs_cell);
+                    const unsigned int n_face_quad_pts = fe_values_face.n_quadrature_points;
+                    dealii::FullMatrix<real> Chi_face(n_face_quad_pts, n_dofs_cell);//chi_face=[\chi_1(face cubature node_i),...,\chi_{N_p}(\xi_{f,k}^r)]
+                    dealii::FullMatrix<real> JW_face(n_face_quad_pts);
+                    for(unsigned int idof=0; idof<n_dofs_cell; idof++){
+                        for(unsigned int iquad=0; iquad<n_face_quad_pts; iquad++){
+                            Chi_face[iquad][idof] = fe_values_face.shape_value_component(idof, iquad,0);//basis funtcion at facet cubature node 
+                        }
+                    }
+                    for(int idim=0; idim<dim; idim++){
+                        for(unsigned int iquad=0; iquad<n_face_quad_pts; iquad++){
+                            JW_face[iquad][iquad] = fe_values_face.JxW(iquad)*normals_int[iquad][idim];
+                        }
+                        dealii::FullMatrix<real> temp1(n_face_quad_pts, n_dofs_cell);
+                        dealii::FullMatrix<real> temp2(n_dofs_cell);
+                        JW_face.mmult(temp1, Chi_face);
+                        Chi_face.Tmmult(temp2, temp1);
+                        facet_lift.add(1.0, temp2);
+                    }
+                }
+            }
+
+            for(unsigned int idof=0; idof<n_dofs_cell; idof++){
+                for(unsigned int idof2=0; idof2<n_dofs_cell; idof2++){
+                    double dif = facet_lift[idof][idof2] - int_parts_facet_lift[idof][idof2];
+                    if(std::abs(dif) > std::abs(max_diff_int_parts))
+                        max_diff_int_parts = dif;
+                 //   printf(" %g ", facet_lift[idof][idof2] - int_parts_facet_lift[idof][idof2]); 
+                }
+               // printf(" \n");
+            }
+            printf("max diff int parts %g\n", max_diff_int_parts);
+
+
     }//end poly loop
 
+
+    if( std::abs(max_diff_int_parts) > 5e-13){
+        printf(" Metrics Do NOT Satisfy integration by parts/consistent normals\n");
+        return 1;
+    }
     if( max_GCL > 5e-13){
         printf(" Metrics Do NOT Satisfy GCL Condition\n");
         return 1;

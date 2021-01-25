@@ -103,20 +103,20 @@ dealii::Point<dim> CurvManifold<dim>::pull_back(const dealii::Point<dim> &space_
     int flag =0;
     while(flag != dim){
         for(int idim=0;idim<dim;idim++){
-            function[idim] = 1.0/20.0; 
+            function[idim] = 1.0/8.0; 
             for(int idim2=0;idim2<dim;idim2++){
-                function[idim] *= std::cos(2.0 * pi* x_ref[idim2]);
+                function[idim] *= std::cos(3.0 * pi/2.0* x_ref[idim2]);
             }
             function[idim] += x_ref[idim] - x_phys[idim];
         }
         for(int idim=0; idim<dim; idim++){
             for(int idim2=0; idim2<dim;idim2++){
-                derivative[idim][idim2] = - 1.0/20.0*2.0 * pi;
+                derivative[idim][idim2] = - 1.0/8.0*3.0 * pi/2.0;
                 for(int idim3 =0;idim3<dim; idim3++){
                     if(idim2 == idim3)
-                        derivative[idim][idim2] *=std::sin(2.0 * pi * x_ref[idim3]);
+                        derivative[idim][idim2] *=std::sin(3.0 * pi/2.0 * x_ref[idim3]);
                     else
-                        derivative[idim][idim2] *=std::cos(2.0 * pi* x_ref[idim3]);
+                        derivative[idim][idim2] *=std::cos(3.0 * pi/2.0* x_ref[idim3]);
                 }
                 if(idim == idim2)
                     derivative[idim][idim2] += 1.0;
@@ -140,9 +140,9 @@ dealii::Point<dim> CurvManifold<dim>::pull_back(const dealii::Point<dim> &space_
     }
     std::vector<double> function_check(dim);
     for(int idim=0;idim<dim; idim++){
-        function_check[idim] = 1.0/20.0;
+        function_check[idim] = 1.0/8.0;
         for(int idim2=0; idim2<dim; idim2++){
-            function_check[idim] *= std::cos(2.0 * pi * x_ref[idim2]);
+            function_check[idim] *= std::cos(3.0 * pi/2.0 * x_ref[idim2]);
         }
         function_check[idim] += x_ref[idim];
     }
@@ -169,9 +169,9 @@ dealii::Point<dim> CurvManifold<dim>::push_forward(const dealii::Point<dim> &cha
     for(int idim=0; idim<dim; idim++)
         x_ref[idim] = chart_point[idim];
     for(int idim=0; idim<dim; idim++){
-        x_phys[idim] = 1.0/20.0;
+        x_phys[idim] = 1.0/8.0;
         for(int idim2=0;idim2<dim; idim2++){
-           x_phys[idim] *= std::cos( 2.0 * pi * x_ref[idim2]);
+           x_phys[idim] *= std::cos( 3.0 * pi/2.0 * x_ref[idim2]);
         }
         x_phys[idim] += x_ref[idim];
     }
@@ -188,12 +188,12 @@ dealii::DerivativeForm<1,dim,dim> CurvManifold<dim>::push_forward_gradient(const
         x[idim] = chart_point[idim];
     for(int idim=0; idim<dim; idim++){
         for(int idim2=0; idim2<dim;idim2++){
-            dphys_dref[idim][idim2] = - 1.0/20.0*2.0 * pi;
+            dphys_dref[idim][idim2] = - 1.0/8.0*3.0 * pi/2.0;
             for(int idim3 =0;idim3<dim; idim3++){
                 if(idim2 == idim3)
-                    dphys_dref[idim][idim2] *=std::sin(2.0 * pi * x[idim3]);
+                    dphys_dref[idim][idim2] *=std::sin(3.0 * pi/2.0 * x[idim3]);
                 else
-                     dphys_dref[idim][idim2] *=std::cos(2.0 * pi* x[idim3]);
+                     dphys_dref[idim][idim2] *=std::cos(3.0 * pi/2.0* x[idim3]);
             }     
             if(idim == idim2)
                 dphys_dref[idim][idim2] += 1.0;
@@ -216,8 +216,8 @@ static dealii::Point<dim> warp (const dealii::Point<dim> &p)
     dealii::Point<dim> q = p;
 
     if (dim == 2){
-        q[dim-1] = p[dim-1] + 1.0/8.0 * std::cos(3.0 * pi/2.0 * p[dim-1]) * std::cos(3.0 * pi/2.0 * p[dim-2]);
-        q[dim-2] = p[dim-2] + 1.0/8.0 * std::cos(3.0 * pi/2.0 * p[dim-1]) * std::cos(3.0 * pi/2.0 * p[dim-2]);
+        q[dim-1] = p[dim-1] + 1.0/8.0 * std::cos(3.0 * pi /2.0 * p[dim-1]) * std::cos(3.0 * pi/2.0* p[dim-2]);
+        q[dim-2] = p[dim-2] + 1.0/8.0 * std::cos(3.0 * pi /2.0 * p[dim-1]) * std::cos(3.0 * pi/2.0* p[dim-2]);
     }
     if(dim==3){
         q[dim-1] =p[dim-1] + 1.0/20.0*  std::cos(2.0 * pi * p[dim-1]) * std::cos(2.0 * pi * p[dim-2]) * std::cos(2.0 * pi * p[dim-3]);
@@ -293,7 +293,8 @@ int main (int argc, char * argv[])
             locally_relevant_dofs = ghost_dofs;
             ghost_dofs.subtract_set(locally_owned_dofs);
 
-            const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree+1);
+           // const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree+1);
+            const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree);
     
 
     const unsigned int n_quad_pts      = volume_quadrature_collection[0].size();
