@@ -270,7 +270,6 @@ int main (int argc, char * argv[])
     dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
     using real = double;
     std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << std::scientific;
-printf("started it\n");
     const int dim = 2;
     const int nstate = 1;
 
@@ -283,7 +282,6 @@ printf("started it\n");
     const bool colorize = true;
     //Generate a standard grid
 
-printf("got to grid\n");
         dealii::parallel::distributed::Triangulation<dim> grid(
             MPI_COMM_WORLD,
             typename dealii::Triangulation<dim>::MeshSmoothing(
@@ -295,13 +293,11 @@ printf("got to grid\n");
 //Warp the grid
 //IF WANT NON-WARPED GRID COMMENT UNTIL SAYS "NOT COMMENT"
 //#if 0
-printf("up to warp\n");
     dealii::GridTools::transform (&warp<dim>, grid);
 
 // Assign a manifold to have curved geometry
     const CurvManifold<dim> curv_manifold;
     unsigned int manifold_id=0; // top face, see GridGenerator::hyper_rectangle, colorize=true
-printf("up to set manifold\n");
     grid.reset_all_manifolds();
     grid.set_all_manifold_ids(manifold_id);
     grid.set_manifold ( manifold_id, curv_manifold );
@@ -332,7 +328,6 @@ printf("up to set manifold\n");
             locally_relevant_dofs = ghost_dofs;
             ghost_dofs.subtract_set(locally_owned_dofs);
 
-printf("yo wtf\n");
            // const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree+1);
             const dealii::MappingQGeneric<dim, dim> mapping_collection (poly_degree);
     
