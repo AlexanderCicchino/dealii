@@ -1604,6 +1604,7 @@ namespace internal
         //(For Free-Stream Preservation)
         const bool conservative_curl_metric = true;
         if((conservative_curl_metric == true) &&(update_flags & update_covariant_transformation) 
+                &&(cell_similarity != CellSimilarity::translation)){ 
         if(dim==2){
 //#if 0
             //Note: for 2D we do not use data.contravariant as above but instead
